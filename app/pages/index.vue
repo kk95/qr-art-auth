@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import EducationalOverlay from '~/components/qr/EducationalOverlay.vue'
 
 // Animated QR-like pixel grid background
 const pixels = ref<Array<{ x: number; y: number; active: boolean; delay: number }>>([])
@@ -115,22 +116,9 @@ onMounted(() => {
             </div>
           </div>
 
-          <!-- Right: Visual QR Demo -->
+          <!-- Right: Interactive Educational QR Demo -->
           <div class="relative animate-slide-in-right">
-            <!-- Large QR Code with Glow -->
-            <div class="relative group">
-              <div class="absolute -inset-1 bg-gradient-to-r from-cyan-400 via-blue-500 to-purple-600 rounded-lg blur-xl opacity-30 group-hover:opacity-50 transition duration-500 animate-pulse-slow" />
-
-              <div class="relative bg-slate-900/90 backdrop-blur-sm border border-white/10 rounded-lg p-12 hover:border-cyan-400/30 transition-all duration-300">
-                <Icon
-                  name="heroicons:qr-code"
-                  class="w-full h-80 text-white/90 drop-shadow-2xl transform group-hover:scale-105 transition-transform duration-500"
-                />
-
-                <!-- Scanline Effect -->
-                <div class="absolute inset-0 bg-gradient-to-b from-transparent via-cyan-400/10 to-transparent animate-scan pointer-events-none" />
-              </div>
-            </div>
+            <EducationalOverlay :show-overlay="true" :auto-animate="true" />
 
             <!-- Floating Labels -->
             <div class="absolute -top-6 -right-6 bg-cyan-400 text-slate-900 font-mono text-xs px-4 py-2 font-bold uppercase tracking-wider rotate-3 shadow-xl animate-float">
