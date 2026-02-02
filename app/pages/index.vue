@@ -83,20 +83,19 @@ onMounted(() => {
 
             <!-- CTA Buttons -->
             <div class="flex flex-wrap gap-4 pt-4">
-              <VoltButton
-                label="Start Creating →"
-                severity="primary"
-                size="large"
-                class="font-mono tracking-wide hover:scale-105 transition-transform duration-200 shadow-lg shadow-blue-500/20"
+              <button
                 @click="$router.push('/dashboard')"
-              />
+                class="font-mono text-lg px-8 py-4 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-bold tracking-wide rounded-lg shadow-xl shadow-cyan-500/30 hover:shadow-cyan-500/50 hover:scale-105 transition-all duration-200 border-2 border-cyan-400/50"
+              >
+                Start Creating →
+              </button>
 
-              <VoltSecondaryButton
-                label="Sign In"
-                size="large"
-                class="font-mono tracking-wide border-2 border-white/10 hover:border-cyan-400/50 transition-colors"
+              <button
                 @click="$router.push('/auth/signin')"
-              />
+                class="font-mono text-lg px-8 py-4 bg-transparent hover:bg-white/10 text-white font-bold tracking-wide rounded-lg border-2 border-white/30 hover:border-cyan-400/70 transition-all duration-200"
+              >
+                Sign In
+              </button>
             </div>
 
             <!-- Social Proof / Stats -->
@@ -122,10 +121,10 @@ onMounted(() => {
             <div class="relative group">
               <div class="absolute -inset-1 bg-gradient-to-r from-cyan-400 via-blue-500 to-purple-600 rounded-lg blur-xl opacity-30 group-hover:opacity-50 transition duration-500 animate-pulse-slow" />
 
-              <div class="relative bg-slate-900/90 backdrop-blur-sm border border-white/10 rounded-lg p-8 hover:border-cyan-400/30 transition-all duration-300">
+              <div class="relative bg-slate-900/90 backdrop-blur-sm border border-white/10 rounded-lg p-12 hover:border-cyan-400/30 transition-all duration-300">
                 <Icon
                   name="heroicons:qr-code"
-                  class="w-full h-64 text-white/90 drop-shadow-2xl transform group-hover:scale-105 transition-transform duration-500"
+                  class="w-full h-80 text-white/90 drop-shadow-2xl transform group-hover:scale-105 transition-transform duration-500"
                 />
 
                 <!-- Scanline Effect -->
