@@ -16,14 +16,17 @@
 ## 🛡️ Quick Reference
 
 ### For Frontend Work
+
 - [.claude/frontend-components.md](.claude/frontend-components.md) - Vue 3, PrimeVue, Volt components
 - [.claude/qr-generation.md](.claude/qr-generation.md) - QR code generation & canvas overlay
 
 ### For Backend Work
+
 - [.claude/backend-api-patterns.md](.claude/backend-api-patterns.md) - Nuxt server routes, API design
 - [.claude/external-integrations.md](.claude/external-integrations.md) - Replicate API, OpenAI API
 
 ### For Development Workflow
+
 - [.claude/architecture.md](.claude/architecture.md) - System design & data flow
 - [.claude/coding-standards.md](.claude/coding-standards.md) - Vue 3, TypeScript, Tailwind patterns
 - [.claude/git-workflow.md](.claude/git-workflow.md) - Commit conventions, PR process
@@ -34,7 +37,7 @@
 
 ## 🔨 Commands
 
-- **Dev:** `pnpm dev` - Start development server (http://localhost:3000)
+- **Dev:** `pnpm dev` - Start development server (<http://localhost:3000>)
 - **Lint:** `pnpm lint` - Run ESLint
 - **Test:** `pnpm test` - Run Vitest tests (when configured)
 - **Build:** `pnpm build` - Build for production
@@ -94,6 +97,7 @@ Never commit `.env` files to git!
 ## 🧪 Testing
 
 Not yet configured. Will use:
+
 - **Vitest** - Unit/integration tests
 - **Playwright** - E2E tests
 
@@ -145,7 +149,7 @@ When working on a specific area, read the relevant `.claude/` file instead of lo
 1. **Install dependencies**: `pnpm install`
 2. **Copy environment**: `cp .env.example .env` (add your API keys)
 3. **Start dev server**: `pnpm dev`
-4. **Visit**: http://localhost:3000
+4. **Visit**: <http://localhost:3000>
 
 ---
 
