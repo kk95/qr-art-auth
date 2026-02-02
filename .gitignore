@@ -1,33 +1,36 @@
-# Nuxt dev/build outputs
-.output
-.data
+# Nuxt
 .nuxt
-.nitro
-.cache
-dist
-
-# Node dependencies
-node_modules
-
-# Logs
-logs
-*.log
-
-# Misc
-.DS_Store
-.fleet
-.idea
-
-# Local env files
+.output
 .env
 .env.*
 !.env.example
 
-# MCP config (may contain secrets)
-.mcp.json
+# Dependencies
+node_modules
+pnpm-lock.yaml
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
 
 # Claude local files
 .claude/settings.local.json
 CLAUDE.local.md
 todos/latest-todos.json
 todos/latest-todos.md
+
+# MCP
+.mcp.json
+
+# Build artifacts
+dist
