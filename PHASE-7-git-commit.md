@@ -76,7 +76,7 @@ Initial project setup: Nuxt 4 + Tailwind 4 + PrimeVue + Volt
 - Initialize Nuxt 4.2.1 with TypeScript strict mode
 - Install Tailwind CSS 4 with PrimeVue integration
 - Set up Pinia state management
-- Copy Volt design system components from ai-call-center-subscription
+- Copy Volt design system components from reference project
 - Create progressive disclosure documentation structure (.claude/)
 - Configure bash validation hook for token optimization
 - Build landing page with hero and features

@@ -1,7 +1,7 @@
 # Phase 5: Volt Component Migration
 
 ## Goal
-Copy Volt design system components from ai-call-center-subscription and set up auto-registration plugin.
+Copy Volt design system components from reference project and set up auto-registration plugin.
 
 ---
 
@@ -9,7 +9,7 @@ Copy Volt design system components from ai-call-center-subscription and set up a
 
 - Phase 4 completed (project structure created)
 - `app/components/volt/` directory exists
-- Access to ai-call-center-subscription project
+- Access to reference project with Volt components
 
 ---
 
@@ -17,12 +17,12 @@ Copy Volt design system components from ai-call-center-subscription and set up a
 
 ### 5.1 Copy Core Volt Components
 
-Copy these components from `/Users/kshitijkarke/Documents/github/ai-call-center-subscription/app/components/volt/`:
+Copy these components from `{REFERENCE_PROJECT}/app/components/volt/`:
 
 **Priority 1 - Essential UI Components:**
 ```bash
 # Navigate to source project
-cd /Users/kshitijkarke/Documents/github/ai-call-center-subscription/app/components/volt
+cd {REFERENCE_PROJECT}/app/components/volt
 
 # Copy core components to qr-art-auth
 cp Button.vue /Users/kshitijkarke/Documents/github/qr-art-auth/app/components/volt/
@@ -141,7 +141,7 @@ If you want to copy **all ~70 Volt components** at once:
 
 ```bash
 # Copy entire volt directory
-cp -r /Users/kshitijkarke/Documents/github/ai-call-center-subscription/app/components/volt/* \
+cp -r {REFERENCE_PROJECT}/app/components/volt/* \
   /Users/kshitijkarke/Documents/github/qr-art-auth/app/components/volt/
 ```
 
@@ -263,7 +263,7 @@ Proceed to **[PHASE-6-documentation.md](PHASE-6-documentation.md)** to create pr
 
 ## What We Accomplished
 
-- ✅ Copied 12 essential Volt components from ai-call-center-subscription
+- ✅ Copied 12 essential Volt components from reference project
 - ✅ Created plugin to auto-register Volt components globally
 - ✅ Tested VoltButton and VoltDialog on landing page
 - ✅ Verified components work without errors

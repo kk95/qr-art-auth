@@ -89,7 +89,7 @@ Create `CLAUDE.md` in project root:
 app/
 ├── assets/styles/main.css      # Tailwind + PrimeVue styles
 ├── components/
-│   ├── volt/                   # Volt design system (from ai-call-center-subscription)
+│   ├── volt/                   # Volt design system components
 │   └── qr/                     # QR-specific components
 ├── composables/                # Reusable composition functions
 ├── layouts/
