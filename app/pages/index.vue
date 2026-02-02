@@ -17,47 +17,52 @@
       </p>
 
       <div class="flex justify-center space-x-4">
-        <NuxtLink
-          to="/dashboard"
-          class="bg-primary hover:bg-primary-hover text-white font-semibold px-6 py-3 rounded-lg transition"
-        >
-          Get Started
-        </NuxtLink>
+        <VoltButton
+          label="Get Started"
+          severity="primary"
+          size="large"
+          @click="$router.push('/dashboard')"
+        />
 
-        <NuxtLink
-          to="/auth/signin"
-          class="bg-card-bg hover:bg-gray-600 text-white font-semibold px-6 py-3 rounded-lg transition"
-        >
-          Sign In
-        </NuxtLink>
+        <VoltSecondaryButton
+          label="Sign In"
+          size="large"
+          @click="$router.push('/auth/signin')"
+        />
       </div>
     </div>
 
     <!-- Features Section -->
     <div class="mt-16 grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl">
-      <div class="bg-card-bg p-6 rounded-lg">
-        <Icon name="heroicons:academic-cap" class="h-12 w-12 text-primary mb-4" />
-        <h3 class="text-xl font-semibold text-white mb-2">QR Education</h3>
-        <p class="text-gray-400">
-          Learn about QR codes with error correction level H (30%)
-        </p>
-      </div>
+      <VoltCard>
+        <template #content>
+          <Icon name="heroicons:academic-cap" class="h-12 w-12 text-primary mb-4" />
+          <h3 class="text-xl font-semibold text-white mb-2">QR Education</h3>
+          <p class="text-gray-400">
+            Learn about QR codes with error correction level H (30%)
+          </p>
+        </template>
+      </VoltCard>
 
-      <div class="bg-card-bg p-6 rounded-lg">
-        <Icon name="heroicons:device-phone-mobile" class="h-12 w-12 text-primary mb-4" />
-        <h3 class="text-xl font-semibold text-white mb-2">Mobile Auth</h3>
-        <p class="text-gray-400">
-          Secure device-flow authentication using dynamic QR codes
-        </p>
-      </div>
+      <VoltCard>
+        <template #content>
+          <Icon name="heroicons:device-phone-mobile" class="h-12 w-12 text-primary mb-4" />
+          <h3 class="text-xl font-semibold text-white mb-2">Mobile Auth</h3>
+          <p class="text-gray-400">
+            Secure device-flow authentication using dynamic QR codes
+          </p>
+        </template>
+      </VoltCard>
 
-      <div class="bg-card-bg p-6 rounded-lg">
-        <Icon name="heroicons:sparkles" class="h-12 w-12 text-primary mb-4" />
-        <h3 class="text-xl font-semibold text-white mb-2">AI-Generated Art</h3>
-        <p class="text-gray-400">
-          Create beautiful blended QR codes with ControlNet AI
-        </p>
-      </div>
+      <VoltCard>
+        <template #content>
+          <Icon name="heroicons:sparkles" class="h-12 w-12 text-primary mb-4" />
+          <h3 class="text-xl font-semibold text-white mb-2">AI-Generated Art</h3>
+          <p class="text-gray-400">
+            Create beautiful blended QR codes with ControlNet AI
+          </p>
+        </template>
+      </VoltCard>
     </div>
   </div>
 </template>
