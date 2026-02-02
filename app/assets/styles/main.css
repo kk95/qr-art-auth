@@ -1,17 +1,15 @@
 @import "tailwindcss";
 @import "tailwindcss-primeui";
 
-@custom-variant dark (&:not(*));
-
 @theme {
   /* QR-Art-Auth Brand Colors */
   --color-primary: #3b82f6;
   --color-primary-hover: #2563eb;
-  --color-background-dark: #0f172a;
-  --color-header-bg: #1e293b;
-  --color-card-bg: #334155;
-  --color-input-bg: #1e293b;
-  --color-border: #475569;
+  --color-background-light: #ffffff;
+  --color-header-bg: #f8fafc;
+  --color-card-bg: #f1f5f9;
+  --color-input-bg: #ffffff;
+  --color-border: #e2e8f0;
 
   /* Semantic colors */
   --color-success: #10b981;
@@ -22,7 +20,7 @@
 
 /* Body background */
 body {
-  background-color: var(--color-background-dark);
-  color: #f1f5f9;
+  background-color: var(--color-background-light);
+  color: #0f172a;
   font-family: system-ui, -apple-system, sans-serif;
 }
