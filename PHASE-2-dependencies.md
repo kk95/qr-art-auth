@@ -37,11 +37,30 @@ pnpm add @pinia/nuxt pinia
 
 **What this installs**:
 - `@pinia/nuxt` - Nuxt module for Pinia
-- `pinia` - Vue state management library
+- `pinia` - Vue state management library (for credits, user state)
 
 ---
 
-### 2.3 Install Tailwind CSS 4
+### 2.3 Install Supabase (Auth + Database + Storage)
+
+```bash
+pnpm add @nuxtjs/supabase
+```
+
+**What this installs**:
+- `@nuxtjs/supabase` - Official Nuxt module for Supabase integration
+- Provides composables: `useSupabaseClient()`, `useSupabaseUser()`, `serverSupabaseClient()`, etc.
+- Handles authentication, database queries, and storage uploads
+
+**Why Supabase?**
+- **Magic Link Auth**: No password management, secure email-based login
+- **PostgreSQL Database**: Managed database with Row Level Security (RLS)
+- **Storage**: Store generated QR images in cloud storage
+- **Free Tier**: 500MB database, 1GB storage, unlimited API requests
+
+---
+
+### 2.4 Install Tailwind CSS 4
 
 ```bash
 pnpm add tailwindcss @tailwindcss/vite
@@ -53,7 +72,7 @@ pnpm add tailwindcss @tailwindcss/vite
 
 ---
 
-### 2.4 Install Icon Libraries
+### 2.5 Install Icon Libraries
 
 ```bash
 pnpm add @nuxt/icon @heroicons/vue
@@ -65,7 +84,7 @@ pnpm add @nuxt/icon @heroicons/vue
 
 ---
 
-### 2.5 Install Development Tools
+### 2.6 Install Development Tools
 
 ```bash
 pnpm add -D @nuxt/eslint typescript
@@ -79,7 +98,7 @@ pnpm add -D @nuxt/eslint typescript
 
 ## Verification
 
-### 2.6 Check package.json
+### 2.7 Check package.json
 
 ```bash
 cat package.json
@@ -92,6 +111,7 @@ Verify these dependencies exist in `dependencies`:
 - `tailwindcss-primeui`
 - `@pinia/nuxt`
 - `pinia`
+- `@nuxtjs/supabase` ← **NEW**
 - `tailwindcss`
 - `@tailwindcss/vite`
 - `@nuxt/icon`
@@ -103,16 +123,17 @@ And in `devDependencies`:
 
 ---
 
-### 2.7 Verify Installation
+### 2.8 Verify Installation
 
 ```bash
-pnpm list primevue pinia tailwindcss
+pnpm list primevue pinia @nuxtjs/supabase tailwindcss
 ```
 
 Should show versions installed:
 ```
 primevue 4.4.1
 pinia 2.3.1
+@nuxtjs/supabase 1.4.2
 tailwindcss 4.1.17
 ```
 
@@ -128,6 +149,7 @@ tailwindcss 4.1.17
 | `@primeuix/themes` | ^2.0.3 |
 | `pinia` | ^2.3.1 |
 | `@pinia/nuxt` | ^0.9.0 |
+| `@nuxtjs/supabase` | ^1.4.2 |
 | `tailwindcss` | ^4.1.17 |
 | `@tailwindcss/vite` | ^4.1.17 |
 | `tailwindcss-primeui` | ^0.6.1 |
@@ -139,11 +161,6 @@ tailwindcss 4.1.17
 ## Optional: Future Dependencies
 
 **Don't install these yet** - we'll add them later when needed:
-
-### For Database (PostgreSQL)
-```bash
-# Later: pnpm add pg @pgtyped/runtime
-```
 
 ### For AI Integration
 ```bash
@@ -166,6 +183,7 @@ tailwindcss 4.1.17
 
 - [ ] PrimeVue packages installed (`@primevue/nuxt-module`, `primevue`, `@primeuix/themes`)
 - [ ] Pinia installed (`@pinia/nuxt`, `pinia`)
+- [ ] Supabase installed (`@nuxtjs/supabase`)
 - [ ] Tailwind CSS 4 installed (`tailwindcss`, `@tailwindcss/vite`, `tailwindcss-primeui`)
 - [ ] Icons installed (`@nuxt/icon`, `@heroicons/vue`)
 - [ ] Dev tools installed (`@nuxt/eslint`, `typescript`)
@@ -208,8 +226,9 @@ Proceed to **[PHASE-3-configuration.md](PHASE-3-configuration.md)** to configure
 
 - ✅ Installed PrimeVue 4.4.1 with Aura theme
 - ✅ Installed Pinia for state management
+- ✅ Installed Supabase for auth, database, and storage
 - ✅ Installed Tailwind CSS 4 with Vite plugin
 - ✅ Installed icon libraries
 - ✅ Installed ESLint and TypeScript dev tools
 
-**Dependencies added**: 11 packages total
+**Dependencies added**: 12 packages total

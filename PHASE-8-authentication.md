@@ -1,386 +1,223 @@
-# Phase 8: Magic Link Authentication
+# Phase 8: Supabase Magic Link Authentication
 
 ## Goal
 
-Implement magic link authentication system for mobile QR code sign-in flow, supporting both email and SMS verification.
+Implement simple email-based authentication using Supabase Magic Links. No passwords, no SMS, no complex flows.
 
 ---
 
 ## Prerequisites
 
-- Phase 5 completed (Volt components working)
-- PostgreSQL database setup (for session storage)
-- API keys obtained:
-  - Resend API key (for email magic links)
-  - Twilio API credentials (for SMS magic links)
+- Phase 2 completed (`@nuxtjs/supabase` installed)
+- Supabase project created at [supabase.com](https://supabase.com)
+- Environment variables configured
 
 ---
 
 ## Authentication Strategy
 
-**Magic Link Flow**: Desktop shows QR code → Mobile scans → User chooses email or SMS → Receives magic link/code → Verifies → Desktop authenticated
+**Supabase Magic Link**: User enters email → Receives link → Clicks link → Authenticated
 
 ### Benefits
-- ✅ No password management
-- ✅ Secure (one-time use, time-limited)
-- ✅ Familiar to users (like Slack, Notion)
-- ✅ Works on any mobile device (no app required)
+- ✅ No password management (more secure)
+- ✅ Supabase handles all auth complexity
+- ✅ Built-in email templates
+- ✅ Free tier (50,000 monthly active users)
+- ✅ Row Level Security (RLS) for database
 
 ---
 
 ## Steps
 
-### 8.1 Install Dependencies
+### 8.1 Create Supabase Project
 
-```bash
-pnpm add resend twilio uuid
-pnpm add -D @types/uuid
-```
-
-**Packages**:
-- `resend` - Email magic link delivery
-- `twilio` - SMS code delivery
-- `uuid` - Generate session IDs
+1. Visit [supabase.com](https://supabase.com) and create account
+2. Create new project:
+   - **Project name**: `qr-art-auth`
+   - **Database password**: Save securely
+   - **Region**: Choose closest to you
+3. Wait for project to provision (~2 minutes)
 
 ---
 
-### 8.2 Set Up Environment Variables
+### 8.2 Get Supabase Credentials
 
-Add to `.env`:
-
-```bash
-# Resend (Email Magic Links)
-RESEND_API_KEY=re_xxxxxxxxxxxxx
-
-# Twilio (SMS Magic Links)
-TWILIO_ACCOUNT_SID=ACxxxxxxxxxxxxx
-TWILIO_AUTH_TOKEN=xxxxxxxxxxxxx
-TWILIO_PHONE_NUMBER=+1234567890
-
-# Application URLs
-APP_URL=http://localhost:3000
-MAGIC_LINK_EXPIRY_MINUTES=10
-```
-
-Update `.env.example` with these variables (without values).
+1. Go to **Settings** > **API**
+2. Copy these values:
+   - **Project URL**: `https://xxxxxxxxxxxxx.supabase.co`
+   - **anon/public key**: `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...`
+   - **service_role key**: `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...` (keep secret!)
 
 ---
 
-### 8.3 Database Schema
+### 8.3 Configure Environment Variables
 
-Create migration for auth sessions:
+Create `.env` file in project root:
+
+```bash
+SUPABASE_URL=https://xxxxxxxxxxxxx.supabase.co
+SUPABASE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+**IMPORTANT**: Add `.env` to `.gitignore` (should already be there)
+
+Update `.env.example`:
+
+```bash
+SUPABASE_URL=your_supabase_url_here
+SUPABASE_KEY=your_supabase_anon_key_here
+REPLICATE_API_TOKEN=your_replicate_token_here
+```
+
+---
+
+### 8.4 Configure Nuxt Module
+
+Update `nuxt.config.ts`:
+
+```typescript
+export default defineNuxtConfig({
+  modules: [
+    '@nuxtjs/supabase',
+    '@primevue/nuxt-module',
+    '@pinia/nuxt',
+    '@nuxt/icon'
+  ],
+
+  supabase: {
+    url: process.env.SUPABASE_URL,
+    key: process.env.SUPABASE_KEY,
+    redirectOptions: {
+      login: '/auth/signin',
+      callback: '/dashboard',
+      exclude: ['/', '/auth/*']
+    }
+  },
+
+  // ... rest of config
+})
+```
+
+---
+
+### 8.5 Create Database Tables
+
+Go to Supabase **SQL Editor** and run:
 
 ```sql
--- sessions table
-CREATE TABLE auth_sessions (
+-- Profiles table (extends auth.users)
+CREATE TABLE profiles (
+  id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  email TEXT NOT NULL,
+  credits_remaining INTEGER DEFAULT 5,
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Enable Row Level Security
+ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
+
+-- Users can only read/update their own profile
+CREATE POLICY "Users can read own profile"
+  ON profiles FOR SELECT
+  USING (auth.uid() = id);
+
+CREATE POLICY "Users can update own profile"
+  ON profiles FOR UPDATE
+  USING (auth.uid() = id);
+
+-- QR Codes table
+CREATE TABLE qr_codes (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  session_id VARCHAR(255) UNIQUE NOT NULL,
-  email VARCHAR(255),
-  phone VARCHAR(20),
-  magic_token VARCHAR(255),
-  verified BOOLEAN DEFAULT FALSE,
-  expires_at TIMESTAMP NOT NULL,
+  user_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  image_url TEXT NOT NULL,
+  qr_data TEXT NOT NULL,
+  preset TEXT NOT NULL CHECK (preset IN ('subtle', 'balanced', 'artistic')),
+  control_scale DECIMAL(3, 2) NOT NULL,
+  is_flagged BOOLEAN DEFAULT FALSE,
   created_at TIMESTAMP DEFAULT NOW()
 );
 
-CREATE INDEX idx_session_id ON auth_sessions(session_id);
-CREATE INDEX idx_magic_token ON auth_sessions(magic_token);
-CREATE INDEX idx_expires_at ON auth_sessions(expires_at);
+CREATE INDEX idx_qr_codes_user_id ON qr_codes(user_id);
+CREATE INDEX idx_qr_codes_created_at ON qr_codes(created_at DESC);
+
+-- Enable Row Level Security
+ALTER TABLE qr_codes ENABLE ROW LEVEL SECURITY;
+
+-- Users can read their own QR codes (only if not flagged)
+CREATE POLICY "Users can read own QR codes"
+  ON qr_codes FOR SELECT
+  USING (auth.uid() = user_id AND is_flagged = FALSE);
+
+-- Users can insert their own QR codes
+CREATE POLICY "Users can insert own QR codes"
+  ON qr_codes FOR INSERT
+  WITH CHECK (auth.uid() = user_id);
+
+-- Users can delete their own QR codes
+CREATE POLICY "Users can delete own QR codes"
+  ON qr_codes FOR DELETE
+  USING (auth.uid() = user_id);
 ```
 
 ---
 
-### 8.4 Create Server API Routes
+### 8.6 Create Storage Bucket
 
-#### 8.4.1 Initialize Auth Session
+1. Go to **Storage** > **Create bucket**
+2. **Name**: `qr-art`
+3. **Public bucket**: Yes (so images are accessible via URL)
+4. Click **Create bucket**
 
-Create `server/api/auth/init.post.ts`:
+Go to **Policies** tab and add:
 
-```typescript
-import { v4 as uuidv4 } from 'uuid'
+```sql
+-- Users can upload to their own folder
+CREATE POLICY "Users can upload own images"
+  ON storage.objects FOR INSERT
+  WITH CHECK (
+    bucket_id = 'qr-art' AND
+    auth.uid()::text = (storage.foldername(name))[1]
+  );
 
-export default defineEventHandler(async (event) => {
-  // Generate unique session ID
-  const sessionId = uuidv4()
-
-  // Calculate expiry (30 minutes from now)
-  const expiresAt = new Date(Date.now() + 30 * 60 * 1000)
-
-  // Save to database
-  await db.authSessions.create({
-    sessionId,
-    expiresAt,
-    verified: false
-  })
-
-  return {
-    success: true,
-    data: {
-      sessionId,
-      qrUrl: `${process.env.APP_URL}/auth/verify?session=${sessionId}`,
-      expiresAt
-    }
-  }
-})
-```
-
-#### 8.4.2 Send Magic Link/Code
-
-Create `server/api/auth/send-magic-link.post.ts`:
-
-```typescript
-import { Resend } from 'resend'
-import { Twilio } from 'twilio'
-import { v4 as uuidv4 } from 'uuid'
-
-const resend = new Resend(process.env.RESEND_API_KEY)
-const twilioClient = new Twilio(
-  process.env.TWILIO_ACCOUNT_SID,
-  process.env.TWILIO_AUTH_TOKEN
-)
-
-export default defineEventHandler(async (event) => {
-  const { sessionId, method, emailOrPhone } = await readBody(event)
-
-  // Validate session exists and not expired
-  const session = await db.authSessions.findBySessionId(sessionId)
-  if (!session || new Date() > session.expiresAt) {
-    throw createError({
-      statusCode: 400,
-      message: 'Invalid or expired session'
-    })
-  }
-
-  // Generate magic token
-  const magicToken = uuidv4()
-  const tokenExpiresAt = new Date(Date.now() + 10 * 60 * 1000) // 10 min
-
-  // Update session with magic token
-  await db.authSessions.update(sessionId, {
-    [method === 'email' ? 'email' : 'phone']: emailOrPhone,
-    magicToken,
-    expiresAt: tokenExpiresAt
-  })
-
-  if (method === 'email') {
-    // Send email magic link
-    const magicLink = `${process.env.APP_URL}/auth/verify?session=${sessionId}&token=${magicToken}`
-
-    await resend.emails.send({
-      from: 'QR Art Auth <noreply@yourapp.com>',
-      to: emailOrPhone,
-      subject: 'Sign in to QR Art Auth',
-      html: `
-        <h1>Sign In</h1>
-        <p>Click the link below to sign in to your desktop session:</p>
-        <a href="${magicLink}">Sign In Now</a>
-        <p>This link expires in 10 minutes.</p>
-      `
-    })
-  } else {
-    // Send SMS code
-    const code = Math.floor(100000 + Math.random() * 900000) // 6-digit code
-
-    await db.authSessions.update(sessionId, { magicToken: code.toString() })
-
-    await twilioClient.messages.create({
-      body: `Your QR Art Auth verification code is: ${code}. Expires in 10 minutes.`,
-      from: process.env.TWILIO_PHONE_NUMBER,
-      to: emailOrPhone
-    })
-  }
-
-  return { success: true }
-})
-```
-
-#### 8.4.3 Verify Magic Link/Code
-
-Create `server/api/auth/verify.post.ts`:
-
-```typescript
-export default defineEventHandler(async (event) => {
-  const { sessionId, token } = await readBody(event)
-
-  // Find session
-  const session = await db.authSessions.findBySessionId(sessionId)
-
-  if (!session) {
-    throw createError({ statusCode: 404, message: 'Session not found' })
-  }
-
-  // Check expiry
-  if (new Date() > session.expiresAt) {
-    throw createError({ statusCode: 400, message: 'Session expired' })
-  }
-
-  // Verify token
-  if (session.magicToken !== token) {
-    throw createError({ statusCode: 401, message: 'Invalid token' })
-  }
-
-  // Mark as verified
-  await db.authSessions.update(sessionId, { verified: true })
-
-  return { success: true }
-})
-```
-
-#### 8.4.4 Check Auth Status (Polling)
-
-Create `server/api/auth/status.get.ts`:
-
-```typescript
-export default defineEventHandler(async (event) => {
-  const query = getQuery(event)
-  const sessionId = query.session as string
-
-  const session = await db.authSessions.findBySessionId(sessionId)
-
-  if (!session) {
-    throw createError({ statusCode: 404, message: 'Session not found' })
-  }
-
-  return {
-    verified: session.verified,
-    expired: new Date() > session.expiresAt
-  }
-})
+-- Public read access
+CREATE POLICY "Public read access"
+  ON storage.objects FOR SELECT
+  USING (bucket_id = 'qr-art');
 ```
 
 ---
 
-### 8.5 Frontend Components
+### 8.7 Create Auth Pages
 
-#### 8.5.1 Update Desktop Sign-In Page
+#### Sign In Page
 
-Update `app/pages/auth/signin.vue`:
-
-```vue
-<script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
-import QRCode from 'qrcode.vue3'
-
-const sessionId = ref<string | null>(null)
-const qrUrl = ref<string | null>(null)
-const polling = ref<NodeJS.Timeout | null>(null)
-
-async function initSession() {
-  const { data } = await $fetch('/api/auth/init', { method: 'POST' })
-  sessionId.value = data.sessionId
-  qrUrl.value = data.qrUrl
-
-  // Start polling for verification
-  startPolling()
-}
-
-function startPolling() {
-  polling.value = setInterval(async () => {
-    if (!sessionId.value) return
-
-    const status = await $fetch(`/api/auth/status?session=${sessionId.value}`)
-
-    if (status.verified) {
-      clearInterval(polling.value!)
-      // Redirect to dashboard
-      navigateTo('/dashboard')
-    }
-
-    if (status.expired) {
-      clearInterval(polling.value!)
-      // Show expiry message
-    }
-  }, 2000) // Poll every 2 seconds
-}
-
-onMounted(() => {
-  initSession()
-})
-
-onUnmounted(() => {
-  if (polling.value) clearInterval(polling.value)
-})
-</script>
-
-<template>
-  <div class="flex flex-col items-center justify-center">
-    <VoltCard class="max-w-md w-full">
-      <template #title>
-        <h1 class="text-2xl font-bold text-white text-center">
-          Sign In with QR Code
-        </h1>
-      </template>
-      <template #content>
-        <div v-if="qrUrl" class="flex items-center justify-center mb-6">
-          <QRCode :value="qrUrl" :size="256" level="H" />
-        </div>
-
-        <p class="text-gray-400 text-center text-sm">
-          Scan this QR code with your mobile device to sign in
-        </p>
-      </template>
-    </VoltCard>
-  </div>
-</template>
-```
-
-#### 8.5.2 Create Mobile Verification Page
-
-Create `app/pages/auth/verify.vue`:
+Create `app/pages/auth/signin.vue`:
 
 ```vue
 <script setup lang="ts">
 import { ref } from 'vue'
 
-const route = useRoute()
-const sessionId = route.query.session as string
-const token = route.query.token as string | undefined
-
-const method = ref<'email' | 'sms'>('email')
-const emailOrPhone = ref('')
-const verificationCode = ref('')
+const supabase = useSupabaseClient()
+const email = ref('')
 const loading = ref(false)
-const step = ref<'choose' | 'verify'>('choose')
+const emailSent = ref(false)
 
-// If token is in URL, auto-verify (email magic link)
-if (token) {
-  verifyMagicLink()
-}
-
-async function sendMagicLink() {
+async function signIn() {
   loading.value = true
   try {
-    await $fetch('/api/auth/send-magic-link', {
-      method: 'POST',
-      body: {
-        sessionId,
-        method: method.value,
-        emailOrPhone: emailOrPhone.value
+    const { error } = await supabase.auth.signInWithOtp({
+      email: email.value,
+      options: {
+        emailRedirectTo: `${window.location.origin}/dashboard`
       }
     })
 
-    if (method.value === 'sms') {
-      step.value = 'verify'
+    if (error) {
+      console.error('Sign in error:', error)
     } else {
-      // Email sent - show message
+      emailSent.value = true
     }
-  } finally {
-    loading.value = false
-  }
-}
-
-async function verifyMagicLink() {
-  loading.value = true
-  try {
-    await $fetch('/api/auth/verify', {
-      method: 'POST',
-      body: {
-        sessionId,
-        token: token || verificationCode.value
-      }
-    })
-
-    // Show success message
   } finally {
     loading.value = false
   }
@@ -388,52 +225,45 @@ async function verifyMagicLink() {
 </script>
 
 <template>
-  <div class="flex flex-col items-center justify-center min-h-screen p-4">
+  <div class="flex items-center justify-center min-h-screen bg-gray-900 p-4">
     <VoltCard class="max-w-md w-full">
       <template #title>
         <h1 class="text-2xl font-bold text-white text-center">
-          Verify Your Identity
+          Sign In to QR Art
         </h1>
       </template>
 
       <template #content>
-        <div v-if="step === 'choose'">
-          <VoltSelectButton
-            v-model="method"
-            :options="[
-              { label: 'Email', value: 'email' },
-              { label: 'SMS', value: 'sms' }
-            ]"
-            option-label="label"
-            option-value="value"
-          />
+        <div v-if="!emailSent">
+          <p class="text-gray-400 mb-4 text-center">
+            Enter your email to receive a magic link
+          </p>
 
           <VoltInputText
-            v-model="emailOrPhone"
-            :placeholder="method === 'email' ? 'Enter your email' : 'Enter your phone'"
-            class="mt-4"
+            v-model="email"
+            type="email"
+            placeholder="your@email.com"
+            class="mb-4 w-full"
           />
 
           <VoltButton
-            label="Send Verification"
-            @click="sendMagicLink"
+            label="Send Magic Link"
+            @click="signIn"
             :loading="loading"
-            class="mt-4 w-full"
+            :disabled="!email"
+            class="w-full"
           />
         </div>
 
-        <div v-else-if="step === 'verify'">
-          <VoltInputOtp
-            v-model="verificationCode"
-            :length="6"
-          />
-
-          <VoltButton
-            label="Verify Code"
-            @click="verifyMagicLink"
-            :loading="loading"
-            class="mt-4 w-full"
-          />
+        <div v-else class="text-center">
+          <Icon name="heroicons:envelope" class="h-16 w-16 text-primary mx-auto mb-4" />
+          <h2 class="text-xl font-semibold text-white mb-2">Check your email</h2>
+          <p class="text-gray-400">
+            We sent a magic link to <strong>{{ email }}</strong>
+          </p>
+          <p class="text-sm text-gray-500 mt-4">
+            Click the link in your email to sign in
+          </p>
         </div>
       </template>
     </VoltCard>
@@ -443,56 +273,133 @@ async function verifyMagicLink() {
 
 ---
 
-### 8.6 Install QR Code Library
+### 8.8 Create Dashboard Page (Protected)
 
-```bash
-pnpm add qrcode.vue3
+Create `app/pages/dashboard.vue`:
+
+```vue
+<script setup lang="ts">
+const user = useSupabaseUser()
+
+// Redirect if not authenticated
+definePageMeta({
+  middleware: 'auth'
+})
+
+async function signOut() {
+  const supabase = useSupabaseClient()
+  await supabase.auth.signOut()
+  navigateTo('/')
+}
+</script>
+
+<template>
+  <div class="min-h-screen bg-gray-900 p-8">
+    <div class="max-w-7xl mx-auto">
+      <div class="flex justify-between items-center mb-8">
+        <h1 class="text-3xl font-bold text-white">Dashboard</h1>
+        <VoltButton label="Sign Out" @click="signOut" severity="secondary" />
+      </div>
+
+      <div class="text-white">
+        <p>Welcome, {{ user?.email }}!</p>
+      </div>
+
+      <!-- QR Generator Component will go here -->
+    </div>
+  </div>
+</template>
 ```
 
 ---
 
-### 8.7 Security Checklist
+### 8.9 Create Profile Trigger (Auto-create on signup)
 
-- [ ] Session IDs are cryptographically random (UUID v4)
-- [ ] Magic tokens expire after 10 minutes
-- [ ] Tokens are one-time use only
-- [ ] Rate limiting implemented (max 3 attempts per session)
-- [ ] HTTPS enforced in production
-- [ ] CORS configured to allow only your domain
-- [ ] Database indexes on `session_id`, `magic_token`, `expires_at`
-- [ ] Expired sessions cleaned up (background job)
+In Supabase **SQL Editor**, create a trigger to auto-create profiles:
+
+```sql
+-- Function to create profile on signup
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS TRIGGER AS $$
+BEGIN
+  INSERT INTO public.profiles (id, email, credits_remaining)
+  VALUES (NEW.id, NEW.email, 5);
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Trigger on auth.users insert
+CREATE TRIGGER on_auth_user_created
+  AFTER INSERT ON auth.users
+  FOR EACH ROW
+  EXECUTE FUNCTION public.handle_new_user();
+```
 
 ---
 
-### 8.8 Testing Checklist
+### 8.10 Update Landing Page
 
-- [ ] Desktop displays QR code correctly
-- [ ] QR code encodes correct URL with session ID
-- [ ] Mobile can scan and open verification page
-- [ ] Email magic link sends and verifies correctly
-- [ ] SMS code sends and verifies correctly
-- [ ] Desktop polling detects verification
-- [ ] Desktop redirects to dashboard after auth
-- [ ] Sessions expire after 10 minutes
-- [ ] Invalid tokens are rejected
-- [ ] Expired sessions show appropriate message
+Update `app/pages/index.vue` to add sign-in button:
+
+```vue
+<script setup lang="ts">
+const user = useSupabaseUser()
+</script>
+
+<template>
+  <div class="min-h-screen bg-gray-900">
+    <div class="max-w-7xl mx-auto px-4 py-16">
+      <h1 class="text-5xl font-bold text-white mb-4 text-center">
+        Create Artistic QR Codes
+      </h1>
+      <p class="text-xl text-gray-400 mb-8 text-center">
+        Educational tool for generating beautiful, scannable QR codes with AI
+      </p>
+
+      <div class="flex justify-center">
+        <VoltButton
+          v-if="!user"
+          label="Get Started"
+          @click="navigateTo('/auth/signin')"
+          size="large"
+        />
+        <VoltButton
+          v-else
+          label="Go to Dashboard"
+          @click="navigateTo('/dashboard')"
+          size="large"
+        />
+      </div>
+    </div>
+  </div>
+</template>
+```
+
+---
+
+## Testing Checklist
+
+- [ ] Can visit `/auth/signin` and see sign-in form
+- [ ] Enter email and receive magic link
+- [ ] Click magic link in email → Redirected to `/dashboard`
+- [ ] User session persists on page refresh
+- [ ] Profile created automatically with 5 credits
+- [ ] Sign out works correctly
+- [ ] Protected pages redirect to sign-in when not authenticated
 
 ---
 
 ## Verification Checklist
 
-- [ ] Dependencies installed (resend, twilio, uuid, qrcode.vue3)
+- [ ] Supabase project created
 - [ ] Environment variables configured
-- [ ] Database schema created
-- [ ] API routes implemented (`/api/auth/*`)
-- [ ] Desktop sign-in page updated
-- [ ] Mobile verification page created
-- [ ] QR code displays correctly
-- [ ] Email magic links work
-- [ ] SMS codes work
-- [ ] Desktop polling works
-- [ ] Security measures implemented
-- [ ] All tests pass
+- [ ] Nuxt module configured
+- [ ] Database tables created (profiles, qr_codes)
+- [ ] Storage bucket created (qr-art)
+- [ ] Auth pages created (`/auth/signin`, `/dashboard`)
+- [ ] Profile auto-creation trigger works
+- [ ] Magic link authentication works end-to-end
+- [ ] RLS policies protect user data
 
 ---
 
@@ -500,24 +407,24 @@ pnpm add qrcode.vue3
 
 ✅ **Phase 8 Complete!**
 
-Proceed to **Phase 9: QR Generation Canvas** to build the image upload and QR overlay feature.
+Proceed to **Phase 9: QR Generation** to build the Simple Mode Generator with AI integration.
 
 ---
 
 ## What We Accomplished
 
-- ✅ Implemented magic link authentication system
-- ✅ Email verification via Resend API
-- ✅ SMS verification via Twilio API
-- ✅ Desktop QR code display with polling
-- ✅ Mobile verification page with email/SMS options
-- ✅ Secure session management with expiry
-- ✅ Rate limiting and security measures
+- ✅ Supabase project setup
+- ✅ Magic Link authentication (no passwords!)
+- ✅ Auto-created user profiles with 5 free credits
+- ✅ Protected routes with middleware
+- ✅ Database tables with Row Level Security
+- ✅ Storage bucket for QR images
+- ✅ Sign in/sign out flow
 
 **Files created**:
-- `server/api/auth/init.post.ts`
-- `server/api/auth/send-magic-link.post.ts`
-- `server/api/auth/verify.post.ts`
-- `server/api/auth/status.get.ts`
-- `app/pages/auth/verify.vue` (new)
-- Updated: `app/pages/auth/signin.vue`
+- `app/pages/auth/signin.vue`
+- `app/pages/dashboard.vue`
+- Updated: `app/pages/index.vue`
+- Updated: `nuxt.config.ts`
+
+**Total implementation time**: ~30 minutes (much simpler than mobile auth!)

@@ -5,9 +5,9 @@
 ## 🧠 Project Overview
 
 **Project Name:** QR-Art-Auth
-**Goal:** SaaS for QR education, mobile device-flow auth, and AI-generated "blended" QR codes
+**Goal:** Educational SaaS for creating artistic QR codes with AI, teaching users how QR codes work through interactive visualizations
 **Stack:** Nuxt 4, Vue 3 (Composition API), TypeScript, Tailwind CSS 4, PrimeVue (Aura + Volt)
-**Backend:** Nuxt Server Routes (Nitro), PostgreSQL (planned)
+**Backend:** Nuxt Server Routes (Nitro), Supabase (Auth + PostgreSQL + Storage)
 **AI:** Replicate API (ControlNet QR), OpenAI API
 **Project Board:** [GitHub Project View 1](https://github.com/users/kk95/projects/1/views/1)
 
@@ -66,8 +66,8 @@ app/
 │   └── default.vue             # Default layout (header, footer, nav)
 ├── pages/
 │   ├── index.vue               # Landing page
-│   ├── dashboard.vue           # QR generation wizard
-│   └── auth/signin.vue         # Mobile QR sign-in
+│   ├── dashboard.vue           # QR generator (Simple Mode)
+│   └── gallery.vue             # User's saved QR codes
 ├── plugins/
 │   └── 02.voltComponent.ts     # Auto-register Volt components
 ├── stores/                     # Pinia stores
@@ -81,9 +81,11 @@ app/
 
 See `.env.example` for required variables:
 
+- `SUPABASE_URL` - Supabase project URL
+- `SUPABASE_KEY` - Supabase anon/public key
+- `SUPABASE_SERVICE_KEY` - Supabase service role key (server-side only)
 - `REPLICATE_API_TOKEN` - Replicate API for AI QR generation
-- `OPENAI_API_KEY` - OpenAI API for text/explanations
-- `DATABASE_URL` - PostgreSQL connection (future)
+- `OPENAI_API_KEY` - OpenAI API for text/explanations (optional)
 
 Never commit `.env` files to git!
 
@@ -111,12 +113,12 @@ When working on a specific area, read the relevant `.claude/` file instead of lo
 
 ## 🎯 Key Features to Build
 
-1. **QR Generator Canvas** - Upload image, overlay QR, preview
-2. **Mobile Sign-In** - Dynamic QR codes with WebSocket session verification
-3. **AI Generation** - Replicate API (ControlNet QR) integration
-4. **Dashboard** - "Create New" wizard with steps
-5. **Authentication** - Device-flow auth pattern
-6. **Database** - PostgreSQL for QR metadata storage
+1. **Simple Mode Generator** - Upload image + 3 preset buttons (Subtle/Balanced/Artistic)
+2. **Educational Overlay** - Interactive canvas highlighting QR code anatomy (finder patterns, data masking, error correction)
+3. **AI Generation** - Replicate API (ControlNet QR) integration with preset control scales
+4. **Gallery & Credits System** - Save generated QR codes, 5 free credits per user
+5. **Authentication** - Supabase Magic Link (email-based, no passwords)
+6. **Database & Storage** - Supabase PostgreSQL + Storage for QR images
 
 ---
 
@@ -131,8 +133,9 @@ When working on a specific area, read the relevant `.claude/` file instead of lo
 | **Icons** | @nuxt/icon (Heroicons) |
 | **TypeScript** | Strict mode |
 | **Package Manager** | pnpm 9.12.3+ |
-| **Database** | PostgreSQL (via Prisma/Drizzle - future) |
-| **AI APIs** | Replicate (ControlNet QR), OpenAI |
+| **Backend** | Supabase (Auth, PostgreSQL, Storage) |
+| **Database** | PostgreSQL (via Supabase) |
+| **AI APIs** | Replicate (ControlNet QR), OpenAI (optional) |
 | **Testing** | Vitest (unit), Playwright (E2E) - future |
 
 ---

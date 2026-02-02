@@ -2,89 +2,156 @@
 
 ## System Overview
 
-QR-Art-Auth is a SaaS platform for QR code education, mobile authentication, and AI-generated QR art.
+QR-Art-Auth is an educational SaaS platform for creating artistic QR codes with AI, teaching users how QR codes work through interactive visualizations.
 
 ### Tech Stack
 - **Frontend**: Nuxt 4 (Vue 3 Composition API, TypeScript)
 - **Styling**: Tailwind CSS 4 + PrimeVue Volt
 - **State**: Pinia
-- **Backend**: Nuxt Server Routes (Nitro)
-- **Database**: PostgreSQL (future)
-- **AI**: Replicate API (ControlNet QR), OpenAI API
+- **Backend**: Nuxt Server Routes (Nitro) + Supabase
+- **Database**: PostgreSQL (via Supabase)
+- **Storage**: Supabase Storage (for QR images)
+- **Authentication**: Supabase Auth (Magic Link)
+- **AI**: Replicate API (ControlNet QR), OpenAI API (optional)
 
 ---
 
 ## Data Flow
 
-### QR Generation Flow
-1. User uploads image
-2. Canvas component overlays QR code
-3. User adjusts scale/position
-4. Frontend sends to `/api/generate`
-5. Backend calls Replicate API (ControlNet QR)
-6. Returns generated image URL
-7. Save metadata to database
+### Authentication Flow (Supabase Magic Link)
 
-### Mobile Auth Flow (Magic Link)
+1. User visits landing page, clicks "Sign In"
+2. User enters email address
+3. Frontend calls `supabase.auth.signInWithOtp({ email })`
+4. Supabase sends magic link to user's email
+5. User clicks link in email → Redirected to `/dashboard`
+6. Supabase session established, user authenticated
+7. Profile created automatically (if first login) with 5 free credits
 
-**Authentication Strategy**: Magic link sent to email or phone (SMS)
+**No passwords, no SMS, no complex flows** - just email magic links via Supabase.
 
-#### Desktop → Mobile QR Flow
+---
 
-1. User visits `/auth/signin` on desktop
-2. Frontend calls `/api/auth/init` → returns `session_id`
-3. Display QR code with URL: `https://yourapp.com/auth/verify?session={session_id}`
-4. Desktop polls `/api/auth/status?session={session_id}` or uses WebSocket
+### Simple Mode QR Generation Flow
 
-#### Mobile Verification Flow
+1. **User Input**:
+   - User uploads image file
+   - User enters QR data (URL or text)
+   - User selects preset: **Subtle** (0.8), **Balanced** (1.1), or **Artistic** (1.4)
 
-1. User scans QR code on mobile
-2. Mobile opens `/auth/verify?session={session_id}`
-3. User chooses authentication method:
-   - **Email Magic Link**: Enter email → Receives link → Click to verify
-   - **SMS Magic Link**: Enter phone → Receives code → Enter to verify
-4. Backend verifies magic link/code
-5. Backend marks `session_id` as authenticated
-6. Desktop polling detects auth success
-7. Desktop redirects to dashboard
+2. **Credit Check**:
+   - Frontend checks user's credits via Pinia store
+   - If credits < 1, show "Buy More Credits" message
 
-#### Magic Link Generation
+3. **API Call**:
+   - Frontend sends FormData to `/api/generate`:
+     ```typescript
+     {
+       image: File,
+       qr_data: string,
+       preset: 'subtle' | 'balanced' | 'artistic',
+       control_scale: number
+     }
+     ```
 
-- **Email**: Use Resend API or similar (free tier available)
-- **SMS**: Use Twilio API (pay-per-SMS)
-- Links expire after 10 minutes
-- One-time use only
-- Rate limiting: Max 3 attempts per session
+4. **Backend Processing**:
+   - Verify user authentication (Supabase middleware)
+   - Check user has credits remaining
+   - Upload image to Supabase Storage
+   - Call Replicate API (ControlNet QR) with `control_scale`
+   - Download generated image from Replicate
+   - Upload generated image to Supabase Storage
+   - Save metadata to `qr_codes` table
+   - Deduct 1 credit from user's profile
 
-#### Security Considerations
+5. **Response**:
+   - Return generated image URL + metadata
+   - Frontend updates credits display
+   - Show Educational Overlay toggle
 
-- Session IDs are UUID v4 (cryptographically random)
-- Magic links/codes expire after 10 minutes
-- Desktop session expires after successful auth or 30 minutes
-- HTTPS only for all auth endpoints
-- CORS configured to allow only your domain
+---
+
+### Educational Overlay Flow
+
+1. Generated QR code displays on canvas
+2. User toggles "How does this work?" button
+3. Canvas overlay activates:
+   - **Red borders**: Highlight 3 finder patterns (corners)
+   - **Blue overlay**: Highlight data modules
+   - **Green overlay**: Highlight error correction blocks
+4. Explanation panel shows:
+   - What each colored region does
+   - Why QR codes are resilient
+   - How scanners read the code
+
+---
+
+### Gallery & Storage Flow
+
+1. User navigates to `/gallery`
+2. Frontend calls `/api/gallery/list` (authenticated)
+3. Backend fetches user's QR codes from database (WHERE user_id = auth.uid() AND is_flagged = FALSE)
+4. Display grid of saved QR codes with metadata
+5. User can:
+   - View full-size image
+   - Download image
+   - Delete QR code (soft delete or hard delete)
+   - Share QR code (public URL)
+
+---
+
+### Safety & Moderation
+
+**Problem**: Users could generate QR codes linking to malicious sites.
+
+**Solution**: `is_flagged` column
+- Admin dashboard (future) to review flagged QR codes
+- Flagged QR codes hidden from gallery
+- RLS policies prevent access to flagged content
+- Protects platform from liability
+
+---
+
+## Security Considerations
+
+- **Authentication**: Supabase handles all auth (magic links, session management, CSRF protection)
+- **Row Level Security (RLS)**: Users can only read/update their own data
+- **Storage Security**: Supabase Storage policies enforce user-scoped uploads
+- **API Keys**: Replicate API key stored server-side only, never exposed to client
+- **Credits System**: Prevents abuse via rate limiting (5 free credits per user)
+- **Content Safety**: `is_flagged` column allows moderation of malicious QR codes
 
 ---
 
 ## Directory Structure
 
-See CLAUDE.md for detailed structure.
+See [CLAUDE.md](../CLAUDE.md) for detailed structure.
 
 Key directories:
 - `app/components/volt/` - Volt design system
-- `app/components/qr/` - QR-specific components
+- `app/components/qr/` - QR-specific components (SimpleQRGenerator, EducationalOverlay)
 - `app/pages/` - File-based routing
-- `app/stores/` - Pinia stores
-- `server/api/` - Nuxt server routes (future)
+  - `index.vue` - Landing page
+  - `dashboard.vue` - QR generator
+  - `gallery.vue` - User's saved QR codes
+- `app/stores/` - Pinia stores (credits)
+- `server/api/` - Nuxt server routes
+  - `generate.post.ts` - AI QR generation
+  - `gallery/list.get.ts` - Fetch user's QR codes
+  - `qr/[id].get.ts` - Get QR metadata
+  - `qr/[id].delete.ts` - Delete QR code
 
 ---
 
-## API Design
+## API Endpoints
 
-### Future Endpoints
-- `POST /api/auth/init` - Initialize auth session
-- `POST /api/generate` - Generate AI QR code
-- `GET /api/qr/:id` - Fetch QR metadata
-- `POST /api/qr/:id/share` - Share QR code
+### Core Endpoints
 
-See [backend-api-patterns.md](backend-api-patterns.md) for details.
+| Endpoint | Method | Description | Auth Required |
+|----------|--------|-------------|---------------|
+| `/api/generate` | POST | Generate AI QR code | Yes |
+| `/api/gallery/list` | GET | List user's QR codes | Yes |
+| `/api/qr/:id` | GET | Get QR metadata | Yes |
+| `/api/qr/:id` | DELETE | Delete QR code | Yes |
+
+See [backend-api-patterns.md](backend-api-patterns.md) for implementation details.
